@@ -27,40 +27,34 @@
 ![image](https://user-images.githubusercontent.com/63813881/173556171-4681026e-ac08-4264-91c3-32575a15a225.png)
 
 <pre>
-import machine
-import urequests 
-from machine import Pin
-import time, network
-import dht
+import thingspeak
+import time
+import Adafruit_DHT
 
-sensor = dht.DHT11(Pin(26))
+channel_id = # put here the ID of the channel you created before
+write_key = # update the "WRITE KEY" in string form
 
-HTTP_HEADERS = {'Content-Type': 'application/json'} 
-THINGSPEAK_WRITE_API_KEY = 'Your API Key' 
+pin = 4
+sensor = Adafruit_DHT.DHT11
 
-UPDATE_TIME_INTERVAL = 5000  # in ms 
-last_update = time.ticks_ms() 
+def measure(channel):
+    try:
+        humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
+        if humidity is not None and temperature is not None:
+            print('Temperature = {0:0.1f}*C Humidity = {1:0.1f}%'.format(temperature, humidity))
+        else:
+            print('Did not receive any reading from sensor. Please check!')
+        # update the value
+        response = channel.update({'field1': temperature, 'field2': humidity})
+    except:
+           print("connection failure")
 
-# Configure ESP32 as Station
-sta_if=network.WLAN(network.STA_IF)
-sta_if.active(True)
-
-print('network config:', sta_if.ifconfig()) 
-
-while True: 
-    if time.ticks_ms() - last_update >= UPDATE_TIME_INTERVAL: 
+if __name__ == "__main__":
+        channel = thingspeak.Channel(id=channel_id, write_key=write_key)
         while True:
-            sensor.measure()
-            temp = sensor.temperature()
-            hum = sensor.humidity()
-            print('Air Temperature: %3.1f C' %temp)
-            print('Air Humidity: %3.1f %%' %hum)
-            time.sleep(1)
-            readings = {'field1':temp, 'field2':hum} 
-            request = urequests.post( 'http://api.thingspeak.com/update?api_key=' + THINGSPEAK_WRITE_API_KEY,
-                                     json = readings, headers = HTTP_HEADERS )  
-            request.close() 
-            print(readings) 
+            measure(channel)
+        #free account has a limitation of 15sec between the updates
+            time.sleep(15)
 </pre>            
 
 ![image](https://user-images.githubusercontent.com/63813881/182765396-c5c76975-880f-4298-8497-f98baee4342b.png)
